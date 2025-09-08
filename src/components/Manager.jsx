@@ -11,24 +11,27 @@ import { ToastContainer, toast } from "react-toastify";
 const Manager = () => {
   const [form, setform] = useState({ url: "", username: "", password: "" });
   const [passwordArray, setpasswordArray] = useState([]);
+
+  const getpasswords = async ()=>{
+    let req = await fetch("http://localhost:3000/")
+    let Passwords = await req.json()
+    setpasswordArray(Passwords);
+}
+
   useEffect(() => {
-    let Passwords = localStorage.getItem("passwords");
-    if (Passwords) {
-      setpasswordArray(JSON.parse(Passwords));
-    }
+    getpasswords()
   }, []);
 
   const handlechange = (e) => {
     setform({ ...form, [e.target.name]: e.target.value });
   };
 
-  const save = () => {
+  const save = async () => {
     if ((form.url, form.username, form.password).trim() !== "") {
-      setpasswordArray([...passwordArray, { ...form, id: uuidv4() }]);
-      localStorage.setItem(
-        "passwords",
-        JSON.stringify([...passwordArray, { ...form, id: uuidv4() }])
-      );
+      
+      setpasswordArray([...passwordArray,{...form,id:uuidv4()}])
+      await fetch("http://localhost:3000/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, id: uuidv4() }) })
+      
       setform({ url: "", username: "", password: "" });
       toast("Password Saved!", {
       position: "top-right",
@@ -43,14 +46,13 @@ const Manager = () => {
     }
   };
 
-  const deletepass = (id) => {
+  const deletepass = async (id) => {
     let c = confirm("Are you want to delete password ?")
     if (c) {
-      setpasswordArray(passwordArray.filter((item) => item.id !== id));
-      localStorage.setItem(
-        "passwords",
-        JSON.stringify(passwordArray.filter((item) => item.id !== id))
-      );
+      setpasswordArray(passwordArray.filter(item => item.id !== id));
+
+      await fetch("http://localhost:3000/",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})})
+    
       toast("Password Deleted!", {
       position: "top-right",
       autoClose: 3000,
@@ -64,9 +66,10 @@ const Manager = () => {
     }
   };
 
-  const editpass = (index) => {
-    setform(passwordArray.filter((i) => i.id === index)[0]);
-    setpasswordArray(passwordArray.filter((i) => i.id !== index));
+  const editpass = async (id) => {
+    await fetch("http://localhost:3000/", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: form.id }) })
+    setform({...passwordArray.filter(i => i.id === id)[0], id: id });
+    setpasswordArray(passwordArray.filter(item => item.id !== id));
   };
 
   const [show, setshow] = useState(false);
@@ -102,9 +105,9 @@ const Manager = () => {
         pauseOnHover
         theme="dark"
       />
-      <div className="flex py-6 items-center gap-3">
+      <div className="flex py-6 items-center gap-3 max-sm:flex-col">
         <input
-          className="bg-white w-[20vw] rounded-3xl p-2 px-7 text-black focus:outline-none"
+          className="bg-white w-[20vw] rounded-3xl p-2 px-7 text-black focus:outline-none max-sm:w-80"
           placeholder="Enter Url"
           id="url"
           name="url"
@@ -113,7 +116,7 @@ const Manager = () => {
         />
 
         <input
-          className="bg-white w-[20vw] rounded-3xl p-2 px-7 text-black focus:outline-none"
+          className="bg-white w-[20vw] rounded-3xl p-2 px-7 text-black focus:outline-none max-sm:w-80"
           placeholder="Enter Username"
           id="username"
           name="username"
@@ -123,7 +126,7 @@ const Manager = () => {
 
         <div className="relative">
           <input
-            className="bg-white w-[20vw] rounded-3xl p-2 px-7 text-black focus:outline-none"
+            className="bg-white w-[20vw] rounded-3xl p-2 px-7 text-black focus:outline-none max-sm:w-80"
             placeholder="Enter Password "
             id="password"
             name="password"
@@ -150,7 +153,7 @@ const Manager = () => {
       <h1 className="text-white text-xl p-2 font-extralight">
         Manager Your Passwords here
       </h1>
-      <div className="w-[70vw] min-h-[60vh] bg-zinc-900 text-white rounded-xl overflow-hidden">
+      <div className="min-w-[98vw] min-h-[65vh] px-10 bg-zinc-900 text-white rounded-xl overflow-hidden max-sm:px-3 max-sm:min-h-[60vh]">
         {passwordArray.length === 0 && (
           <div className="font-bold p-3">No Passwords to show</div>
         )}
@@ -168,18 +171,14 @@ const Manager = () => {
               {passwordArray.map((item, index) => {
                 return (
                   <tr key={index}>
-                    <td className="text-center py-2  items-center w-30">
-                      <div className="flex items-center justify-center gap-3 ">
+                    <td className="text-center py-2 w-30">
+                      <div className="flex items-center justify-center max-sm:w-20">
                         <a href={item.url} target="_blank">
                           {item.url}
                         </a>
-                        <FaRegCopy
-                          className="cursor-pointer active:text-gray-600 opacity-[0.8]"
-                          onClick={() => copyText(item.url)}
-                        />
                       </div>
                     </td>
-                    <td className="text-center py-2 w-30">
+                    <td className="text-center py-2 w-30 ">
                       <div className="flex items-center justify-center gap-3 ">
                         <span>{item.username}</span>
                         <FaRegCopy
@@ -188,16 +187,16 @@ const Manager = () => {
                         />
                       </div>
                     </td>
-                    <td className="text-center py-2  w-30">
+                    <td className="text-center py-2 w-30 ">
                       <div className="flex items-center justify-center gap-3 ">
-                        <span>{item.password}</span>
+                        <span>{"*".repeat(item.password.length)}</span>
                         <FaRegCopy
                           className="cursor-pointer active:text-gray-600  opacity-[0.8]"
                           onClick={() => copyText(item.password)}
                         />
                       </div>
                     </td>
-                    <td className="text-center py-2 w-30">
+                    <td className="text-center py-2 w-30 ">
                       <div className="flex items-center justify-center gap-3 ">
                         <FaEdit
                           className="text-xl cursor-pointer hover:opacity-[0.6]"
